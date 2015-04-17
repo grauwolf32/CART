@@ -4,8 +4,11 @@
 
 using namespace std;
 
-typedef vector<pair<int,vector<double> > train_data;
+typedef vector<pair<int,vector<double> > > train_data;
 typedef vector<pair<double,int> > 		    feature;
+
+double gini_impurity(double n,double n1);
+double d_imp(int n,int n_l, int n_1, int n_1_l);
 
 class Leaf
 {
@@ -39,7 +42,7 @@ class Leaf
 Leaf::Leaf()
 {
 	pLeft  = NULL;
-	PRight = NULL;
+	pRight = NULL;
 	label  = -1; // Unlabeled
 
 	PrL = PrR = 0.0;
@@ -53,14 +56,14 @@ Leaf::Leaf()
 Leaf::Leaf(train_data* data_,vector<int>& items_,int n_1_)
 {
 	pLeft  = NULL;
-	PRight = NULL;
+	pRight = NULL;
 	label  = -1; // Unlabeled
 
 	PrL = PrR = 0.0;
 	if( (double)n_1_ / (double)items.size() > 0.5) label = 0; // 1st class
 	else label = 1;
 
-	impurity = gini_impurity((double)*data_.size(),(double)n_1_); 
+	impurity = gini_impurity((double)*data_->size(),(double)n_1_); 
 	s = pair<double,int>(0.0,-1);
 
 	n_1 = n_1_;
@@ -71,7 +74,7 @@ Leaf::Leaf(train_data* data_,vector<int>& items_,int n_1_)
 Leaf::~Leaf()
 {
 	pLeft  = NULL;
-	PRight = NULL;
+	pRight = NULL;
 	data   = NULL;
 	items.clear();
 }
@@ -100,7 +103,9 @@ int Leaf::classify(vector<double>& sample)
 void Leaf::split()
 {
 	int m = (int)items.size();
-	int k = data[0].second.size();
+	int k = (*data)[0].second.size();
+
+	if( (double)m / data->size() < 0.1 ) return; // Xopow 
 
 	int n_l = 0;
 	int n_l_1 = 0;
@@ -115,8 +120,8 @@ void Leaf::split()
 	{	
 		for(int i = 0; i < m;i++)
 		{
-			f[i].first  = *data[items[i]].second[j];
-			f[i].second = *data[items[i]].first;
+			f[i].first  = (*data)[items[i]].second[j];
+			f[i].second = (*data)[items[i]].first;
 		}
 
 		sort(f.begin(),f.end());
@@ -144,7 +149,7 @@ void Leaf::split()
 
 	for(int i = 0;i < m;i++)
 	{
-		if(*data[items[i]].second[s.second] < s.first) 
+		if((*data)[items[i]].second[s.second] < s.first) 
 			item_left.push_back(items[i]);
 		else item_right.push_back(items[i]);
 	}	
