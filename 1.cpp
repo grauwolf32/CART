@@ -1,3 +1,4 @@
+#include <iostream>
 #include <algorithm>
 #include <utility>
 #include <vector>
@@ -14,7 +15,7 @@ class Leaf
 {
 	public:
 			Leaf();
-			Leaf(train_data* data,vector<int>& items,int n_1);
+			Leaf(train_data* data,vector<int>* items,int n_1);
 			~Leaf();
 
 			Leaf* pLeft;    // pointers to the left
@@ -32,7 +33,7 @@ class Leaf
 			
 	private:	
 			pair<double,int> s;
-			vector<int>  items;
+			vector<int>*  items;
 			train_data*   data;
 			int    n_1; // number of items of first class
 
@@ -51,16 +52,17 @@ Leaf::Leaf()
 
 	s = pair<double,int>(0.0,-1);
 	data = NULL;
+	items = NULL;
 }
 
-Leaf::Leaf(train_data* data_,vector<int>& items_,int n_1_)
+Leaf::Leaf(train_data* data_,vector<int>* items_,int n_1_)
 {
 	pLeft  = NULL;
 	pRight = NULL;
 	label  = -1; // Unlabeled
 
 	PrL = PrR = 0.0;
-	if( (double)n_1_ / (double)items.size() > 0.5) label = 0; // 1st class
+	if( (double)n_1_ / (double)items->size() > 0.5) label = 0; // 1st class
 	else label = 1;
 
 	impurity = gini_impurity((double)(*data_).size(),(double)n_1_); 
@@ -76,7 +78,8 @@ Leaf::~Leaf()
 	pLeft  = NULL;
 	pRight = NULL;
 	data   = NULL;
-	items.clear();
+	if(items != NULL)delete items;
+	items->clear();
 }
 
 int Leaf::classify(vector<double>& sample)
@@ -102,7 +105,7 @@ int Leaf::classify(vector<double>& sample)
 
 void Leaf::split()
 {
-	int m = (int)items.size();
+	int m = (int)items->size();
 	int k = (*data)[0].second.size();
 
 	if( (double)m / data->size() < 0.01 ) return; // Xopow 
@@ -120,8 +123,8 @@ void Leaf::split()
 	{	
 		for(int i = 0; i < m;i++)
 		{
-			f[i].first  = (*data)[items[i]].second[j];
-			f[i].second = (*data)[items[i]].first;
+			f[i].first  = (*data)[(*items)[i]].second[j];
+			f[i].second = (*data)[(*items)[i]].first;
 		}
 
 		sort(f.begin(),f.end());
@@ -144,14 +147,14 @@ void Leaf::split()
 		}
 	}
 	
-	vector<int> item_left;
-	vector<int> item_right;
+	vector<int>* item_left = new vector<int>;
+	vector<int>* item_right = new vector<int>;
 
 	for(int i = 0;i < m;i++)
 	{
-		if((*data)[items[i]].second[s.second] < s.first) 
-			item_left.push_back(items[i]);
-		else item_right.push_back(items[i]);
+		if((*data)[(*items)[i]].second[s.second] < s.first) 
+			item_left->push_back((*items)[i]);
+		else item_right->push_back((*items)[i]);
 	}	
 
 	n_l_1 = n_l_1_;
@@ -203,7 +206,7 @@ class CART_binar_classifier
 {
 	public:
 			CART_binar_classifier();
-			CART_binar_classifier();
+			~CART_binar_classifier();
 
 			void train(vector<vector<double> >* data,vector<int>* answ_);
                void print_tree();
@@ -222,7 +225,10 @@ class CART_binar_classifier
 
 CART_binar_classifier::CART_binar_classifier()
 {
-	
+	data_ = NULL;
+	answ_ = NULL;
+	m = 0;
+	n = 0;
 }
 
 CART_binar_classifier::~CART_binar_classifier()
@@ -233,8 +239,8 @@ CART_binar_classifier::~CART_binar_classifier()
 void CART_binar_classifier::clear()
 {
 	//if(answ_ != NULL)delete [] answ_; // Have i done this ?
-	//if(data  != NULL)delete [] data_; //
-	//if(main_node != NULL)main_node->destroy();
+	//if(data_  != NULL)delete [] data_; //
+	if(main_node != NULL)main_node->destroy();
 
 	answ_ = NULL;
 	data_ = NULL;
@@ -242,7 +248,13 @@ void CART_binar_classifier::clear()
 
      m = 0;
      n = 0;
+
 	data.clear();
+}
+
+int CART_binar_classifier::predict(vector<double>& sample)
+{
+	return main_node->classify(sample);
 }
 
 void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* answ_t)
@@ -253,24 +265,43 @@ void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* a
 	answ_ = answ_t;
 
 	m = (int)data_->size();
-     n = (int)data_[0]->size();
+     n = (int)(*data_)[0].size();
 	int n_1 = 0;
 
 	for(int i = 0;i < m;i++)
 	{
-			data.push_back(pair(answ_[i],(*data_)[i]));
+			data.push_back(pair<int,vector<double> >((*answ_)[i],(*data_)[i]));
 	}
      //
-     vector<int> items;
+     vector<int>* items = new vector<int>;
 	for(int i = 0;i < m;i++)
 	{
-		items.push_back(i);
-		if(answ_t[i] == 0)n_1 += 1;
+		items->push_back(i);
+		if((*answ_t)[i] == 0)n_1 += 1;
 	}
 
-     //train_data* data,vector<int>& items,int n_1);
 	main_node = new Leaf(&data,items,n_1);
-	main_node.split();
-	
+	main_node->split();
+
 	return;
+}
+
+int main(void)
+{
+	CART_binar_classifier cart;
+	vector<vector<double> >* A = new vector<vector<double> > (100);
+	vector<int>* B = new vector<int>;
+	vector<double> temp;
+
+	for(int i = 0;i < 100;i++)
+	{
+		temp[0] = (double)i;
+		A[i].push_back(temp);
+	 	B->push_back(i%2);
+	}
+	cart.train(A,B);
+	temp[0] = 3;
+	cout << cart.predict(temp) << "\n";
+	
+	return 0;
 }

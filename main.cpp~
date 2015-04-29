@@ -5,7 +5,7 @@
 using namespace std;
 
 typedef vector<pair<int,vector<double> > > train_data;
-typedef vector<pair<double,int> > 		    feature;
+typedef vector<pair<double,int> > 		      feature;
 
 double gini_impurity(double n,double n1);
 double d_imp(int n,int n_l, int n_1, int n_1_l);
@@ -16,6 +16,7 @@ class Leaf
 			Leaf();
 			Leaf(train_data* data,vector<int>& items,int n_1);
 			~Leaf();
+
 			Leaf* pLeft;    // pointers to the left
 			Leaf* pRight;   //  and right child 
 	
@@ -29,7 +30,6 @@ class Leaf
 			void destroy();
 			void prunge();
 			
-
 	private:	
 			pair<double,int> s;
 			vector<int>  items;
@@ -63,7 +63,7 @@ Leaf::Leaf(train_data* data_,vector<int>& items_,int n_1_)
 	if( (double)n_1_ / (double)items.size() > 0.5) label = 0; // 1st class
 	else label = 1;
 
-	impurity = gini_impurity((double)*data_->size(),(double)n_1_); 
+	impurity = gini_impurity((double)(*data_).size(),(double)n_1_); 
 	s = pair<double,int>(0.0,-1);
 
 	n_1 = n_1_;
@@ -105,7 +105,7 @@ void Leaf::split()
 	int m = (int)items.size();
 	int k = (*data)[0].second.size();
 
-	if( (double)m / data->size() < 0.1 ) return; // Xopow 
+	if( (double)m / data->size() < 0.01 ) return; // Xopow 
 
 	int n_l = 0;
 	int n_l_1 = 0;
@@ -172,7 +172,7 @@ void Leaf::destroy()
 	if(pRight != NULL)
 		pRight->destroy();
 
-	delete this;
+	delete this; //Possible error
 }
 
 void Leaf::prunge()
@@ -198,3 +198,79 @@ double d_imp(int n,int n_l, int n_1, int n_1_l) // value to maximize
 	return (1.0/(double)n_l)*(double)( (n_1_l)*(n_1_l) + (n_2_l)*(n_2_l) )\
 		+ (1.0/(double)n_r)*(double)( (n_1_r)*(n_1_r) + (n_2_r)*(n_2_r) );  
 }	
+
+class CART_binar_classifier
+{
+	public:
+			CART_binar_classifier();
+			CART_binar_classifier();
+
+			void train(vector<vector<double> >* data,vector<int>* answ_);
+               void print_tree();
+
+			int 	predict(vector<double>& sample);
+			Leaf* main_node;
+	private:
+			int m,n;
+			void clear();
+			vector<vector<double> >* data_;
+			vector<int>* 			answ_;
+			train_data 			data;
+	
+			
+};
+
+CART_binar_classifier::CART_binar_classifier()
+{
+	
+}
+
+CART_binar_classifier::~CART_binar_classifier()
+{
+	clear();
+}
+
+void CART_binar_classifier::clear()
+{
+	//if(answ_ != NULL)delete [] answ_; // Have i done this ?
+	//if(data  != NULL)delete [] data_; //
+	//if(main_node != NULL)main_node->destroy();
+
+	answ_ = NULL;
+	data_ = NULL;
+     main_node = NULL;
+
+     m = 0;
+     n = 0;
+	data.clear();
+}
+
+void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* answ_t)
+{
+	clear();
+
+	data_ = data_t;
+	answ_ = answ_t;
+
+	m = (int)data_->size();
+     n = (int)data_[0]->size();
+	int n_1 = 0;
+
+	for(int i = 0;i < m;i++)
+	{
+			data.push_back(pair(answ_[i],(*data_)[i]));
+	}
+     //
+     vector<int> items;
+	for(int i = 0;i < m;i++)
+	{
+		items.push_back(i);
+		if(answ_t[i] == 0)n_1 += 1;
+	}
+
+     //train_data* data,vector<int>& items,int n_1);
+	main_node = new Leaf(&data,items,n_1);
+	main_node.split();
+	
+	return;
+}
