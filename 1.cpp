@@ -168,23 +168,23 @@ void Leaf::split()
 	
 }
 
-void Leaf::destroy()
-{
-	if(pLeft != NULL)
-		pLeft->destroy();
-	if(pRight != NULL)
-		pRight->destroy();
-
-	delete this; //Possible error
-}
-
-void Leaf::prunge()
-{
-	if(pLeft != NULL)
-		pLeft->destroy();
-	if(pRight != NULL)
-		pRight->destroy();
-}
+//void Leaf::destroy()
+//{
+//	if(pLeft != NULL)
+//		pLeft->destroy();
+//	if(pRight != NULL)
+//		pRight->destroy();
+//
+//	delete this; //Possible error
+//}
+//
+//void Leaf::prunge()
+//{
+//	if(pLeft != NULL)
+//		pLeft->destroy();
+//	if(pRight != NULL)
+//		pRight->destroy();
+//}
 
 double gini_impurity(double n,double n1)
 {	
@@ -293,15 +293,6 @@ int main(void)
 	vector<int>* B = new vector<int>;
 	vector<double> temp;
 
-	for(int i = 0;i < 100;i++)
-	{
-		temp[0] = (double)i;
-		A[i].push_back(temp);
-	 	B->push_back(i%2);
-	}
-	cart.train(A,B);
-	temp[0] = 3;
-	cout << cart.predict(temp) << "\n";
 	
 	return 0;
 }

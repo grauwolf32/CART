@@ -1,0 +1,19 @@
+#define N 100
+
+class foo{
+	public:
+		int A[100];
+		void destroy();
+};
+
+void foo::destroy()
+{
+	delete this;
+}
+
+int main(void)
+{
+	foo* a = new foo;
+	a->destroy();
+	return 0;
+}
