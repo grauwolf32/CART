@@ -26,6 +26,8 @@ class Leaf
 			
 			int classify(vector<double>& sample);
 			void split();
+               void print_leaf(int leaf_level = 0);
+			void print_tree(int leaf_level = 0);
 
 	private:	
 			pair<double,int> s;
@@ -59,7 +61,7 @@ Leaf::Leaf(train_data* data_,vector<int>* items_,int n_1_)
 	label  = -1; // Unlabeled
 
 	PrL = PrR = 0.0;
-	if( (double)n_1_ / ((double)items_->size()+1) > 0.5) label = 0;  // ??
+	if( (double)n_1_ / ((double)items_->size()) > 0.5) label = 0;  // ??
 	else label = 1;
 
 	impurity = gini_impurity((double)(*data_).size(),(double)n_1_); 
@@ -108,9 +110,10 @@ void Leaf::split()
 	int k = (*data)[0].second.size();
      int index = 0;
 
-	if( (double)m / data->size() < 0.05 ) return; 
+	if( (double)m / data->size() < 0.01 ) return; 
      if(n_1 <= 0 || n_1 >= (int)items->size()) return;
-     cout << "Data % : "<< (double)m / data->size();
+
+     cout << "Data % : "<< (double)m / data->size()<<"\n";
 
 	int n_l = 0;
 	int n_l_1 = 0;
@@ -123,6 +126,12 @@ void Leaf::split()
 
 	for(int j = 0; j < k;j++)
 	{	
+		n_l = 0;
+		n_l_1 = 0;
+
+		n_l_ = 0;
+		n_l_1_ = 0;
+
 		for(int i = 0; i < m;i++)
 		{
 			f[i].first  = (*data)[(*items)[i]].second[j];
@@ -136,7 +145,7 @@ void Leaf::split()
 			n_l += 1;
 			if(f[i].second == 0)
 				n_l_1 += 1;
-         
+
 			imp = d_imp(m,n_l,n_1,n_l_1);
                cout <<"m: "<< m<<" n_1: "<<n_1 <<" n_l_1: " << n_l_1 <<" n_l: " << n_l << " imp: "<<imp <<"\n";
 			if(imp > s.first)
@@ -154,10 +163,10 @@ void Leaf::split()
 	
 	vector<int>* item_left  = new vector<int>;
 	vector<int>* item_right = new vector<int>;
-     cout <<"\nsplitter ("<<s.first<<","<<s.second<<")\n";
+     cout <<"\n splitter ("<<s.first<<","<<s.second<<")\n";
 	for(int i = 0;i < m;i++)
 	{
-		if((*data)[(*items)[i]].second[s.second] < s.first) 
+		if((*data)[(*items)[i]].second[s.second] <= s.first) 
 			item_left->push_back((*items)[i]);
 		else item_right->push_back((*items)[i]);
 	}	
@@ -168,19 +177,43 @@ void Leaf::split()
 	pLeft = new Leaf(data,item_left,n_l_1);
 	pRight = new Leaf(data,item_right,n_r_1);
 
-     cout << "n_l_1 " << n_l_1<< " pLeft: \n";
+     cout <<"n_1 : "<< n_1 << " n_l_1 : " << n_l_1<<" size: "<<(int)item_left->size()<<" label: "<<pLeft->label <<" pLeft: \n";
      for(int i = 0;i < (int)item_left->size();i++)
      	cout << (*item_left)[i] << "  ";
      cout <<"\n";
-     cout << "n_r_1 " << n_r_1<< " pRight: \n";
+     cout <<"n_1 : "<< n_1 << " n_r_1 " << n_r_1<<" size: "<<(int)item_right->size()<<" label: "<<pRight->label<< " pRight: \n";
      for(int i = 0;i < (int)item_right->size();i++)
      	cout << (*item_right)[i] << "  ";
      cout <<"\n";
+     
 	pLeft->split();
 	pRight->split();
 	
 }
 
+void Leaf::print_leaf(int leaf_level)
+{
+	int n = (int)items->size();
+	cout << "\nLeaf in level: "<< leaf_level << "\n";
+	cout << "Label : " << label << " %: "<< ((double)n_1)/(double)n<< " n: "<<n <<" n_1: "<<n_1<<"\n";
+     cout << "Separate by value "<<s.first <<" of feature "<<s.second<<"\n";
+     cout << "Elements id in leaf: \n";
+     for(int i = 0;i < n;i++)
+     {
+		cout << (*items)[i] << " ";
+	}
+     cout << "\n";
+}
+
+void Leaf::print_tree(int leaf_level)
+{
+	print_leaf(leaf_level);
+	leaf_level += 1;
+	if(pLeft != NULL)
+		pLeft->print_tree(leaf_level);
+	if(pRight != NULL)
+		pRight->print_tree(leaf_level);
+}
 class CART_binar_classifier
 {
 	public:
@@ -282,6 +315,10 @@ void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* a
 	return;
 }
 
+void CART_binar_classifier::print_tree()
+{
+	main_node->print_tree();
+}
 
 double gini_impurity(double n,double n1)
 {	
@@ -305,7 +342,7 @@ double d_imp(int n,int n_l, int n_1, int n_1_l) // value to maximize
 
 int main(void)
 {
-     int n = 100;
+     int n = 3;
 	CART_binar_classifier cart;
 	vector<vector<double> >* A = new vector<vector<double> >;
 	vector<int>* B = new vector<int>;
@@ -315,13 +352,19 @@ int main(void)
 	{
 		temp.push_back(i);
           A->push_back(temp);
-          B->push_back(i%3);
+          B->push_back( (int)(i%3 > 0) );
           temp.clear();
 	}
      cart.train(A,B);
-     //temp.push_back(9);
-     //cout << cart.predict(temp);
+     
+     for(int i = 0; i < n;i++)
+     {
+		temp.push_back(i);
+ 	     cout <<" i: "<< i <<" predicted: " <<cart.predict(temp) <<"\n";
+		temp.clear();
+	}
 
+	cart.print_tree();
      delete A;
      delete B;
 	

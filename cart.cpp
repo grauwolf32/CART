@@ -18,10 +18,10 @@ class Leaf
 			Leaf(train_data* data,vector<int>* items,int n_1);
                ~Leaf();
 
-			Leaf* pLeft;    // pointers to the left
-			Leaf* pRight;   //  and right child 
+			Leaf* pLeft;    
+			Leaf* pRight;   
 	
-			double PrL,PrR; // procrent fraction 
+			double PrL,PrR; 
 			double impurity;
 			
 			int classify(vector<double>& sample);
@@ -31,8 +31,8 @@ class Leaf
 			pair<double,int> s;
 			vector<int>*  items;
 			train_data*   data;
-		     int  label; // label of the dominant class in the leaf	
-			int    n_1; // number of items of first class
+		     int  label; 
+			int    n_1; 
 
 				
 };
@@ -41,7 +41,7 @@ Leaf::Leaf()
 {
 	pLeft  = NULL;
 	pRight = NULL;
-	label  = -1; // Unlabeled
+	label  = -1; 
 
 	PrL = PrR = 0.0;
 	impurity = -1.0;
@@ -56,10 +56,10 @@ Leaf::Leaf(train_data* data_,vector<int>* items_,int n_1_)
 {
 	pLeft  = NULL;
 	pRight = NULL;
-	label  = -1; // Unlabeled
+	label  = -1; 
 
 	PrL = PrR = 0.0;
-	if( (double)n_1_ / ((double)items_->size()+1) > 0.5) label = 0;  // ??
+	if( (double)n_1_ / ((double)items_->size()) > 0.5) label = 0;  
 	else label = 1;
 
 	impurity = gini_impurity((double)(*data_).size(),(double)n_1_); 
@@ -111,7 +111,7 @@ void Leaf::split()
 	if( (double)m / data->size() < 0.01 ) return; 
      if(n_1 <= 0 || n_1 >= (int)items->size()) return;
 
-     cout << "Data % : "<< (double)m / data->size();
+     cout << "Data % : "<< (double)m / data->size()<<"\n";
 
 	int n_l = 0;
 	int n_l_1 = 0;
@@ -124,6 +124,12 @@ void Leaf::split()
 
 	for(int j = 0; j < k;j++)
 	{	
+		n_l = 0;
+		n_l_1 = 0;
+
+		n_l_ = 0;
+		n_l_1_ = 0;
+
 		for(int i = 0; i < m;i++)
 		{
 			f[i].first  = (*data)[(*items)[i]].second[j];
@@ -131,13 +137,13 @@ void Leaf::split()
 		}
 
 		sort(f.begin(),f.end());
-          //---------------------------------------------------------------
-		for(int i = 1; i < m-1;i++) // 0 and m ?
+         
+		for(int i = 1; i < m-1;i++) 
 		{
 			n_l += 1;
 			if(f[i].second == 0)
 				n_l_1 += 1;
-         
+
 			imp = d_imp(m,n_l,n_1,n_l_1);
                cout <<"m: "<< m<<" n_1: "<<n_1 <<" n_l_1: " << n_l_1 <<" n_l: " << n_l << " imp: "<<imp <<"\n";
 			if(imp > s.first)
@@ -150,15 +156,15 @@ void Leaf::split()
 			}	
 		}
           s = pair<double,int>((*data)[(*items)[index]].second[s.second],s.second);
-          //---------------------------------------------------------------
+
 	}
 	
 	vector<int>* item_left  = new vector<int>;
 	vector<int>* item_right = new vector<int>;
-     cout <<"\nsplitter ("<<s.first<<","<<s.second<<")\n";
+
 	for(int i = 0;i < m;i++)
 	{
-		if((*data)[(*items)[i]].second[s.second] < s.first) 
+		if((*data)[(*items)[i]].second[s.second] <= s.first) 
 			item_left->push_back((*items)[i]);
 		else item_right->push_back((*items)[i]);
 	}	
@@ -168,15 +174,7 @@ void Leaf::split()
 
 	pLeft = new Leaf(data,item_left,n_l_1);
 	pRight = new Leaf(data,item_right,n_r_1);
-
-     cout << "n_l_1 " << n_l_1<< " pLeft: \n";
-     for(int i = 0;i < (int)item_left->size();i++)
-     	cout << (*item_left)[i] << "  ";
-     cout <<"\n";
-     cout << "n_r_1 " << n_r_1<< " pRight: \n";
-     for(int i = 0;i < (int)item_right->size();i++)
-     	cout << (*item_right)[i] << "  ";
-     cout <<"\n";
+     
 	pLeft->split();
 	pRight->split();
 	
@@ -267,14 +265,14 @@ void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* a
 
 	for(int i = 0;i < m;i++)
 	{
-			data.push_back(pair<int,vector<double> >((*answ_)[i],(*data_)[i])); // ???
+			data.push_back(pair<int,vector<double> >((*answ_)[i],(*data_)[i])); 
 	}
 
      vector<int>* items = new vector<int>;
 	for(int i = 0;i < m;i++)
 	{
 		items->push_back(i);
-		if((*answ_t)[i] == 0)n_1 += 1; // ???
+		if((*answ_t)[i] == 0)n_1 += 1; 
 	}
 
 	main_node = new Leaf(&data,items,n_1);
@@ -289,7 +287,7 @@ double gini_impurity(double n,double n1)
    return 1.0 - (n1/n)*(n1/n) - ((n-n1)/n)*((n-n1)/n);
 }
 
-double d_imp(int n,int n_l, int n_1, int n_1_l) // value to maximize
+double d_imp(int n,int n_l, int n_1, int n_1_l) 
 {
 	double n_r = n - n_l;
 	double n_2_l = n_l - n_1_l;
@@ -300,13 +298,10 @@ double d_imp(int n,int n_l, int n_1, int n_1_l) // value to maximize
 		+ (1.0/(double)n_r)*(double)( (n_1_r)*(n_1_r) + (n_2_r)*(n_2_r) );  
 }	
 
-//typedef vector<pair<int,vector<double> > >    train_data;
-//typedef vector<pair<double,int> > 		      feature;
-//void train(vector<vector<double> >* data,vector<int>* answ_);
 
 int main(void)
 {
-     int n = 100;
+     int n = 10;
 	CART_binar_classifier cart;
 	vector<vector<double> >* A = new vector<vector<double> >;
 	vector<int>* B = new vector<int>;
@@ -314,15 +309,19 @@ int main(void)
 
      for(int i = 0;i < n;i++)
 	{
-		temp.push_back(i);
+		temp.push_back(i+100);
           A->push_back(temp);
-          B->push_back(i%3);
+          B->push_back( (int)((i+100)%3 > 0) );
           temp.clear();
 	}
      cart.train(A,B);
-     //temp.push_back(9);
-     //cout << cart.predict(temp);
-
+     
+     for(int i = 0; i < n;i++)
+     {
+		temp.push_back(i+100);
+ 	     cout <<" i: "<< i <<" predicted: " <<cart.predict(temp) <<"\n";
+		temp.clear();
+	}
      delete A;
      delete B;
 	
