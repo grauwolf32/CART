@@ -35,7 +35,7 @@ void cross_validation(vector<vector<double> >* data_in,vector<int>* answ_in,\
 	    vector<vector<double> >* data_out_train,vector<int>* answ_out_train,\
 	    vector<vector<double> >* data_out_test,vector<int>* answ_out_test,double data_prc);
 
-int const max_period = 30;
+int const max_period = 60;
 double const min_step = 1.0;
 double const eps = 0.000001;
 

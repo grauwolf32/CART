@@ -4,8 +4,8 @@ using namespace std;
 
 CART_binar_classifier::CART_binar_classifier()
 {
-	data_ = NULL;
-	answ_ = NULL;
+	data = NULL;
+	answ = NULL;
      main_node = NULL;
 
 	m = 0;
@@ -29,14 +29,12 @@ void CART_binar_classifier::clear()
 		destroy_tree(main_node);
 	}
 
-	answ_ = NULL;
-	data_ = NULL;
+	answ = NULL;
+	data = NULL;
      main_node = NULL;
 
      m = 0;
      n = 0;
-
-	data.clear();
 }
 
 void CART_binar_classifier::destroy_tree(Leaf* pCurrent)
@@ -56,17 +54,12 @@ void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* a
 {
 	clear();
 
-	data_ = data_t;
-	answ_ = answ_t;
+	data = data_t;
+	answ = answ_t;
 
-	m = (int)data_->size();
-     n = (int)(*data_)[0].size();
+	m = (int)data->size();
+     n = (int)(*data)[0].size();
 	int n_1 = 0;
-
-	for(int i = 0;i < m;i++)
-	{
-			data.push_back(pair<int,vector<double> >((*answ_)[i],(*data_)[i])); 
-	}
 
      vector<int>* items = new vector<int>;
 	for(int i = 0;i < m;i++)
@@ -75,13 +68,11 @@ void CART_binar_classifier::train(vector<vector<double> >* data_t,vector<int>* a
 		if((*answ_t)[i] == 0)n_1 += 1; 
 	}
 
-	main_node = new Leaf(&data,items,n_1);
+	main_node = new Leaf(data,answ,items,n_1);
 	main_node->split();
-
-	/*
-	data_->clear();
-	answ_->clear();
-	*/
+	
+	data = NULL;
+	answ = NULL;
 
 	return;
 }

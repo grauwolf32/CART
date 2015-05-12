@@ -12,7 +12,7 @@ class CART_binar_classifier
 			CART_binar_classifier();
 			~CART_binar_classifier();
 
-			void train(vector<vector<double> >* data,vector<int>* answ_);
+			void train(vector<vector<double> >* data_,vector<int>* answ_);
                void print_tree();
 
 			int 	predict(vector<double>& sample);
@@ -22,11 +22,9 @@ class CART_binar_classifier
 			int m,n;
 			void clear();
 			void destroy_tree(Leaf* pCurrent);
-			vector<vector<double> >* data_;
-			vector<int>* 			answ_;
-			train_data 			data;
+			vector<vector<double> >* data;
+			vector<int>* 			answ;
 	
-			
 };
 
 #endif

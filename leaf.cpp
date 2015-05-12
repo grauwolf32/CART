@@ -7,24 +7,33 @@ Leaf::Leaf()
 	pLeft  = NULL;
 	pRight = NULL;
 	label  = -1; 
+	size_ = 0;
 
 	PrL = PrR = 0.0;
 	impurity = -1.0;
+	err_prc = 0.0;
+
+	prc = 0.0;
+	err_n = 0;
+
 	n_1 = 0;
 
 	s = pair<double,int>(0.0,-1);
+
 	data = NULL;
+	answ = NULL;
 	items = NULL;
 }
 
-Leaf::Leaf(train_data* data_,vector<int>* items_,int n_1_)
+Leaf::Leaf(vector<vector<double> >* data_,vector<int>* answ_,vector<int>* items_,int n_1_)
 {
 	pLeft  = NULL;
 	pRight = NULL;
 	label  = -1; 
 
 	PrL = PrR = 0.0;
-	if( (double)n_1_ / ((double)items_->size()) > 0.5) label = 0;  
+	prc = (double)n_1_ / ((double)items_->size());
+	if( prc > 0.5) label = 0;  
 	else label = 1;
 
 	impurity = gini_impurity((double)(*data_).size(),(double)n_1_); 
@@ -32,7 +41,16 @@ Leaf::Leaf(train_data* data_,vector<int>* items_,int n_1_)
 
 	n_1 = n_1_;
 	items = items_;
+	size_ = (int)items->size();
+
+	if(label == 0)
+		err_n = size_ - n_1;
+	else err_n = n_1;
+
+	err_prc = (double)err_n / data->size();
+
 	data  = data_; 		
+	answ  = answ_; 
 }
 
 Leaf::~Leaf()
@@ -66,10 +84,60 @@ int Leaf::classify(vector<double>& sample)
 	return label;
 }
 
+int Leaf::T(int n_leafs)
+{
+	if(pLeft != NULL)
+		pLeft->T(n_leafs);
+	if(pRight != NULL)
+		pRight->T(n_leafs);
+	n_leafs += 1;
+
+	return n_leafs;
+}
+
+void Leaf::join()
+{
+	if(pLeft != NULL)
+		pLeft->join();
+	if(pRight != NULL)
+		pRight->join();
+
+	if(pLeft->pLeft == NULL && pLeft->pRight == NULL)
+	{
+		data = pLeft->data;
+		answ = pLeft->answ;	
+
+		for(int i = 0;i < pLeft->size();i++)
+		{
+			items->push_back((*pLeft->items)[i]);
+		}
+
+		delete pLeft;
+		pLeft = NULL;
+	}
+
+	if(pRight->pLeft == NULL && pRight->pRight == NULL)
+	{
+		data = pLeft->data;
+		answ = pLeft->answ;	
+
+		for(int i = 0;i < pRight->size();i++)
+		{
+			items->push_back((*pRight->items)[i]);
+		}
+
+		delete pRight;
+		pRight = NULL;
+	}
+	
+	PrL = PrR = 0.0;
+	
+}
+
 void Leaf::split()
 {
 	int m = (int)items->size();
-	int k = (*data)[0].second.size();
+	int k = (*data)[0].size();
      int index = 0;
 
 	if( (double)m / data->size() < 0.001 ) {return; }
@@ -93,8 +161,8 @@ void Leaf::split()
 
 		for(int i = 0; i < m;i++)
 		{
-			f[i].first  = (*data)[(*items)[i]].second[j];
-			f[i].second = (*data)[(*items)[i]].first;
+			f[i].first  = (*data)[(*items)[i]][j];
+			f[i].second = (*answ)[i];
 		}
 
 		sort(f.begin(),f.end());
@@ -131,14 +199,14 @@ void Leaf::split()
 
 	for(int i = 0;i < m;i++)
 	{
-		if((*data)[(*items)[i]].second[s.second] <= s.first)
+		if((*data)[(*items)[i]][s.second] <= s.first)
 		{
 			item_left->push_back((*items)[i]);
 		}
 		else item_right->push_back((*items)[i]);
 	}	
 
-	/*items->clear();*/
+	items->clear();
 
 	n_l_1 = n_l_1_;
 	int n_r_1 = n_1 - n_l_1;
@@ -146,42 +214,28 @@ void Leaf::split()
 	if(item_left->size() == 0 || item_right->size() == 0)
 		{return;}
 		
-	pLeft = new Leaf(data,item_left,n_l_1);
-	pRight = new Leaf(data,item_right,n_r_1);
-	
-     
+	pLeft = new Leaf(data,answ,item_left,n_l_1);
+	pRight = new Leaf(data,answ,item_right,n_r_1); 
+
 	pLeft->split();
 	pRight->split();
+
+	PrL = (double) pLeft->size() / data->size();
+	PrL = (double) pRight->size() / data->size();
+
+	data = NULL;
+	answ = NULL;
 	
 }
 
 void Leaf::print_leaf(int leaf_level)
 {
-	int n = (int)items->size();
 	cout << "\nLeaf in level: "<< leaf_level << "\n";
-	cout << "Label : " << label << " %: "<< ((double)n_1)/(double)n<< " n: "<<n <<" n_1: "<<n_1<<"\n";
+	cout << "Label : " << label <<"\n";
      cout << "Impurity: "<< impurity << "\n";
+	cout << "First class %: "<<prc<< "\n";
+	cout << "Number of incorrect classified examples: "<<err_n<<"\n";
      cout << "Separate by value "<<s.first <<" of feature "<<s.second<<"\n";
-
-	if(n > 0)
-	{
-     	cout << "Elements id in leaf: \n";
-     	for(int i = 0;i < n;i++)
-     	{
-			cout << (*items)[i] << " ";
-		}
-     	cout << "\n";
-	}
-
-	if(s.second != -1 && n > 0)
-	{
-     	cout << "Values in leaf: \n";
-     	for(int i = 0;i < n;i++)
-     	{
-			cout << (*data)[(*items)[i]].second[s.second] << " ";
-		}
-    	 	cout << "\n";
-	}
 }
 
 void Leaf::print_tree(int leaf_level)

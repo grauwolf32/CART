@@ -201,18 +201,35 @@ int is_equ(double a,double b)
 
 double score(vector<int>* predicted,vector<int>* answ)
 {
-	double ans = 0.0;
+	double scr = 0.0;
+	double scr_0 = 0.0;
+	double scr_1 = 0.0;
+
 	int n = predicted->size();
 	int k = 0;
+	int l = 0;
 
 	for(int i = 0;i < n;i++)
 	{
+		if((*predicted)[i] == (*answ)[i]){scr += 1.0;}
 		if((*predicted)[i] == (*answ)[i] && (*answ)[i] == 0)
-			ans += 1.0;
-		if((*answ)[i] == 0)k++;
+			scr_0 += 1.0;
+		if((*predicted)[i] == (*answ)[i] && (*answ)[i] == 1)
+			scr_1 += 1.0;
+
+		if((*answ)[i] == 0){k++;}
+		else {l++;}
 	}
-	cout <<"ans: "<<ans<<" k: "<<k<<"\n";
-	ans /= k;
-	return ans;
+
+	scr /= n;
+	scr_0 /= k;
+	scr_1 /= l;
+
+	cout <<"score: "<< scr << "\n";
+	cout <<"score 0: "<< scr_0 << "\n";
+	cout <<"score 1: "<< scr_1 << "\n";
+	
+
+	return scr;
 }
 

@@ -130,18 +130,18 @@ void binary_cart_boost_classifier::train(vector<vector<double> >* data_,vector<i
 
 		for(int i = 0;i < number_of_models;i++)
 		{
-			vector<vector<double> >* data_out = new vector<vector<double> >;
-			vector<int>* 			answ_out = new vector<int>;
+			vector<vector<double> >  data_out;
+			vector<int>			answ_out;
 
 			vector<int>* 			selected_data_ = new vector<int>;
 			vector<int>*			selected_feature_ = new vector<int>;
 			
-			rsm(data,answ,data_out,answ_out,data_prc,feature_prc,selected_data_,selected_feature_);
+			rsm(data,answ,&data_out,&answ_out,data_prc,feature_prc,selected_data_,selected_feature_);
 
 			selected_data.push_back(selected_data_);
 			selected_features.push_back(selected_feature_);
 
-			models[i].train(data_out,answ_out);
+			models[i].train(&data_out,&answ_out);
 		}
 		double min_err = 0.0;
 		int min_i = 0;
@@ -174,14 +174,13 @@ void binary_cart_boost_classifier::train(vector<vector<double> >* data_,vector<i
 		
 		std::random_device rd;
 		std::mt19937 gen(rd());
-		std::uniform_real_distribution<> dis(0,0.5);
+		std::normal_distribution<> dis(0,0.25);
 		
 		for(int i = 0;i < number_of_models;i++)
 		{
 			weights[i] += dis(gen);
 		}
 		
-
 	}
 
 	for(int i = 0; i < number_of_models;i++)
@@ -248,7 +247,7 @@ void binary_cart_boost_classifier::train(vector<vector<double> >* data_,vector<i
 
 	predict(data,&h);
 	L_err = L(h,(*answ));
-	cout <<"L("<<period<<") :"<<L_err<<"\n"; 
+	cout <<"L("<<period<<") :"<<L_err<<"\n";
 
 	/*if(L_1_err < L_err )return;*/
 	
