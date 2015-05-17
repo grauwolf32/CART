@@ -13,54 +13,76 @@ int main(void)
 
 	vector<int>* B = new vector<int>;
 	vector<int>* D = new vector<int>;
-
+	vector<double>* As = new vector<double>;
 	vector<int>* E = new vector<int>;
 	vector<int>* P = new vector<int>;
-
-	vector<double>* G = new vector<double>;
+	
 
 	vector<double> temp;
 
-	char tr_name[] = "/data/train.data";
-	char tr_answ[] = "/data/train.answ";
+	char tr_name[] = "train.data";
+	char tr_answ[] = "train.answ";
 
 	read_data_from_file(tr_name,tr_answ,A,B);
-
-	cross_validation(A,B,C,D,L,P,0.66);
+	cross_validation(A,B,C,D,L,P,0.667);
 	
 	cart.train(C,D);
-	cart.predict(L,E);
+	
+	binary_cart_boost_classifier boost(100,0.5,0.5);
 
-	score(E,P); 
+	int num = 10;
+	double min_score = 10e+6;
+	double score_tmp = 0.0;
+	double cart_min = 10e+6;
+	double cart_tmp = 0.0;
 
-	binary_cart_boost_classifier boost(200,0.5,0.8);
+	//cross_validation(A,B,C,D,L,P,0.667);
 	boost.train(C,D);
-	boost.predict(L,G);
 
-	for(int i = 0;i < boost.number_of_models;i++)
-		summ += boost.weights[i];
-	summ /= boost.number_of_models;
+	for(int i = 0;i < num;i++)
+	{	
+		cross_validation(A,B,C,D,L,P,0.667);
+		
+		boost.predict(L,As);
 
-	E->clear();
+		E->clear();
+		cart.predict(L,E);
+		cart_tmp = score(E,P); 
+		if(cart_min > cart_tmp)
+			cart_min = cart_tmp;
+		
+	
+		for(int i = 0;i < boost.number_of_models;i++)
+			summ += boost.weights[i];
+		summ /= boost.number_of_models;
 
-	for(int i = 0;i < G->size();i++)
-	{
-		if((*G)[i] >= summ)
-			E->push_back(1);
+		E->clear();
+		
+		for(int i = 0;i < As->size();i++)
+		{
+			if((*As)[i] >= summ)
+				E->push_back(1);
 
-		else E->push_back(0);
+			else E->push_back(0);
+		}
+		
+		score_tmp = score(E,P);
+		if(min_score > score_tmp)
+			min_score = score_tmp;
+		
 	}
-	
-	score(E,P);
-	
+	for(int i = 0;i < boost.number_of_models;i++)
+		cout << " "<<boost.weights[i]<<" ";
+	cout << "\n";
+	cout <<"Score cart: "<<cart_min<<"\n";
+	cout <<"Score boost: "<<min_score<<"\n";
+
+	//cart.print_tree();
      A->clear();delete A;
      B->clear();delete B;
 	C->clear();delete C;
 	D->clear();delete D;
 	E->clear();delete E;
-	G->clear();delete G;
-	P->clear();delete P;
-	L->clear();delete L;
 	
 	return 0;
 }

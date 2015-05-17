@@ -98,22 +98,17 @@ void binary_cart_boost_classifier::predict(vector<vector<double> >* data_in,vect
 }
 
 */
-void binary_cart_boost_classifier::train(vector<vector<double> >* data_,vector<int>* answ_,int period)
+void binary_cart_boost_classifier::train(vector<vector<double> >* data_,vector<int>* answ_)
 {
-	if(period > max_period)
-		return;
-
-	vector<vector<double> > G;
-	vector<double>    h;
-	vector<double> temp;
 
 	double g_ij = 0.0;
 	double b_i = 0.0;
 	double w_i = 0.0;
 	double beta = 0.0;
 	double a_sum = 0.0;
+	double best_err = 1e+10;
 
-	double min_square_err = -1.0;
+	double min_square_err = 1e+10;
 	double square_err = 0.0;
 	double L_1_err = 0.0;
 	double L_err = 0.0;
@@ -122,135 +117,155 @@ void binary_cart_boost_classifier::train(vector<vector<double> >* data_,vector<i
 	int y_j = 0;
 	int a  =  0;
 	
+	vector<vector<double> > G;
+	vector<double>    h;
+	vector<double> temp;	
+	vector<double> weights_best;
 
-	if(period == 0)
+	data = data_;
+	answ = answ_;
+
+	for(int i = 0;i < number_of_models;i++)
+		weights[i] = 0.0;
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0,0.9);
+
+	for(int i = 0;i < number_of_models;i++)
 	{
-		data = data_;
-		answ = answ_;
+		vector<vector<double> >* data_out = new vector<vector<double> >;
+		vector<int>* 			answ_out = new vector<int>;
 
-		for(int i = 0;i < number_of_models;i++)
-		{
-			vector<vector<double> >  data_out;
-			vector<int>			answ_out;
-
-			vector<int>* 			selected_data_ = new vector<int>;
-			vector<int>*			selected_feature_ = new vector<int>;
+		vector<int>* 			selected_data_ = new vector<int>;
+		vector<int>*			selected_feature_ = new vector<int>;
 			
-			rsm(data,answ,&data_out,&answ_out,data_prc,feature_prc,selected_data_,selected_feature_);
+		rsm(data,answ,data_out,answ_out,0.1+dis(gen),0.1+dis(gen),selected_data_,selected_feature_);
 
-			selected_data.push_back(selected_data_);
-			selected_features.push_back(selected_feature_);
+		selected_data.push_back(selected_data_);
+		selected_features.push_back(selected_feature_);
 
-			models[i].train(&data_out,&answ_out);
-		}
-		double min_err = 0.0;
-		int min_i = 0;
-
-		for(int i = 0;i < number_of_models;i++)
-		{
-			weights[i] = 1.0;
-			predict(data,&h);
-			
-			L_err = L(h,(*answ));
-
-			if(is_equ(min_err,0.0))
-			{
-				min_err = L_err;
-				min_i = i;
-			}
-
-			if(L_err < min_err)
-			{
-				min_err = L_err;
-				min_i = i;
-			}
-			weights[i] = 0.0;
-		}	
-
-		
-		weights[min_i] = 1.0;
-		cout <<"Start error: "<< min_err <<"\n";
-		
-		
-		std::random_device rd;
-		std::mt19937 gen(rd());
-		std::normal_distribution<> dis(0,0.25);
-		
-		for(int i = 0;i < number_of_models;i++)
-		{
-			weights[i] += dis(gen);
-		}
-		
+		models[i].train(data_out,answ_out);
 	}
 
-	for(int i = 0; i < number_of_models;i++)
+	double min_err = 0.0;
+	int min_i = 0;
+
+	for(int i = 0;i < number_of_models;i++)
 	{
-		temp.clear();
+		weights[i] = 1.0;
 		predict(data,&h);
-
-		for(int j = 0; j < (int)h.size();j++)
-		{
-			y_j = (*answ)[j];
-			temp.push_back(y_j - sigm(h[j]));
-		}
-		G.push_back(temp);
-	}
 		
-	for(int i = 0; i < number_of_models;i++)
-	{
-		vector<vector<double> > data_i;
-		vector<double> a_i;
+		L_err = L(h,(*answ));
 
-		sub_space(data,&data_i,selected_features[i]);
-		int k = data_i.size();
-
-		beta = 0.0;
-		a_sum = 0.0;
-		square_err = 0.0;
-
-		for(int j = 0;j < k;j++)
+		if(is_equ(min_err,0.0))
 		{
-			a = models[i].predict(data_i[j]);
-			a_i.push_back(a);
-			beta += G[i][j]*a;
-			a_sum += a*a;
-		}
-		beta /= a_sum;
-
-		for(int j = 0;j < k;j++)
-		{
-			square_err += (G[i][j] - beta*a_i[j])*(G[i][j] - beta*a_i[j]);
+			min_err = L_err;
+			min_i = i;
 		}
 
-		if(min_square_err < 0.0)
+		if(L_err < min_err)
 		{
-			min_square_err = square_err;
-			index = i;
+			min_err = L_err;
+			min_i = i;
 		}
+		weights[i] = 0.0;
+	}	
 
-		if(square_err <= min_square_err)
-		{
-			min_square_err = square_err;
-			index = i;
-		}
-	}
-	
-	b_i = coeff(period);
-	w_i = weights[index];	
-
+		
+	weights[min_i] = 1.0;
+	cout <<"Start error: "<< min_err <<"\n";
+		
 	/*
-	predict(data,&h);
-	L_1_err = L(h,(*answ));
+	std::random_device rd_;
+	std::mt19937 gen_(rd_());
+	std::uniform_real_distribution<> dist(-0.5,0.5);
+		
+	for(int i = 0;i < number_of_models;i++)
+	{
+		weights[i] += dist(gen_);
+	}
 	*/
-
-	weights[index] += sign(beta)*b_i;
-
-	predict(data,&h);
-	L_err = L(h,(*answ));
-	cout <<"L("<<period<<") :"<<L_err<<"\n";
-
-	/*if(L_1_err < L_err )return;*/
 	
-	period += 1;
-	train(data_,answ_,period);
+	for(int period = 0; period < max_period;period++)
+	{
+		G.clear();
+		for(int i = 0; i < number_of_models;i++)
+		{
+			temp.clear();
+			predict(data,&h);
+
+			for(int j = 0; j < (int)h.size();j++)
+			{
+				y_j = (*answ)[j];
+				temp.push_back(y_j - sigm(h[j]));
+			}
+			G.push_back(temp);
+		}
+		
+		for(int i = 0; i < number_of_models;i++)
+		{
+			vector<vector<double> > data_i;
+			vector<double> a_i;
+
+			sub_space(data,&data_i,selected_features[i]);
+			int k = data_i.size();
+
+			beta = 0.0;
+			a_sum = 0.0;
+			square_err = 0.0;
+
+			for(int j = 0;j < k;j++)
+			{
+				a = models[i].predict(data_i[j]);
+				a_i.push_back(a);
+				beta += G[i][j]*a;
+				a_sum += a*a;
+			}
+			beta /= a_sum;
+	
+			for(int j = 0;j < k;j++)
+			{
+				square_err += (G[i][j] - beta*a_i[j])*(G[i][j] - beta*a_i[j]);
+			}
+
+			if(square_err <= min_square_err)
+			{
+				min_square_err = square_err;
+				index = i;
+			}
+		}
+	
+		b_i = coeff(period);
+		w_i = weights[index];
+
+		/*
+		predict(data,&h);
+		L_1_err = L(h,(*answ));
+		*/
+
+		weights[index] += sign(beta)*b_i;
+
+		predict(data,&h);
+		L_err = L(h,(*answ));
+
+		if(L_err < best_err)
+		{
+			best_err = L_err;
+			weights_best = vector<double>(&weights[0],&weights[number_of_models -1]);
+		}
+	
+		cout <<"L("<<period<<") :"<<L_err<<"\n";
+		
+
+		/*if(L_1_err < L_err )return;*/
+	
+	}
+
+	
+	for(int i = 0;i < number_of_models;i++)
+		weights[i] = weights_best[i];
+
+	cout << "\nBest weights size: "<< weights_best.size();
+	cout << "Min error: "<< best_err <<"\n";
 }

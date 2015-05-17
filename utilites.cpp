@@ -27,7 +27,7 @@ double d_imp(int n,int n_l, int n_1, int n_1_l)
 
 double coeff(int period)
 {
-	return min_step - (double)period/max_period;
+	return min_step*(1.0 - (double)((double)period/(double)max_period));
 }
 
 double sign(double x)

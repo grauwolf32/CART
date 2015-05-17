@@ -7,50 +7,34 @@ Leaf::Leaf()
 	pLeft  = NULL;
 	pRight = NULL;
 	label  = -1; 
-	size_ = 0;
 
 	PrL = PrR = 0.0;
 	impurity = -1.0;
-	err_prc = 0.0;
-
-	prc = 0.0;
-	err_n = 0;
-
 	n_1 = 0;
 
 	s = pair<double,int>(0.0,-1);
 
 	data = NULL;
-	answ = NULL;
 	items = NULL;
 }
 
-Leaf::Leaf(vector<vector<double> >* data_,vector<int>* answ_,vector<int>* items_,int n_1_)
+Leaf::Leaf(train_data* data_,vector<int>* items_,int n_1_,int id_)
 {
 	pLeft  = NULL;
 	pRight = NULL;
 	label  = -1; 
 
 	PrL = PrR = 0.0;
-	prc = (double)n_1_ / ((double)items_->size());
-	if( prc > 0.5) label = 0;  
+	if( (double)n_1_ / ((double)items_->size()) > 0.5) label = 0;  
 	else label = 1;
 
 	impurity = gini_impurity((double)(*data_).size(),(double)n_1_); 
 	s = pair<double,int>(0.0,-1);
 
 	n_1 = n_1_;
+	id = id_;
 	items = items_;
-	size_ = (int)items->size();
-
-	if(label == 0)
-		err_n = size_ - n_1;
-	else err_n = n_1;
-
-	err_prc = (double)err_n / data->size();
-
 	data  = data_; 		
-	answ  = answ_; 
 }
 
 Leaf::~Leaf()
@@ -84,60 +68,10 @@ int Leaf::classify(vector<double>& sample)
 	return label;
 }
 
-int Leaf::T(int n_leafs)
-{
-	if(pLeft != NULL)
-		pLeft->T(n_leafs);
-	if(pRight != NULL)
-		pRight->T(n_leafs);
-	n_leafs += 1;
-
-	return n_leafs;
-}
-
-void Leaf::join()
-{
-	if(pLeft != NULL)
-		pLeft->join();
-	if(pRight != NULL)
-		pRight->join();
-
-	if(pLeft->pLeft == NULL && pLeft->pRight == NULL)
-	{
-		data = pLeft->data;
-		answ = pLeft->answ;	
-
-		for(int i = 0;i < pLeft->size();i++)
-		{
-			items->push_back((*pLeft->items)[i]);
-		}
-
-		delete pLeft;
-		pLeft = NULL;
-	}
-
-	if(pRight->pLeft == NULL && pRight->pRight == NULL)
-	{
-		data = pLeft->data;
-		answ = pLeft->answ;	
-
-		for(int i = 0;i < pRight->size();i++)
-		{
-			items->push_back((*pRight->items)[i]);
-		}
-
-		delete pRight;
-		pRight = NULL;
-	}
-	
-	PrL = PrR = 0.0;
-	
-}
-
 void Leaf::split()
 {
 	int m = (int)items->size();
-	int k = (*data)[0].size();
+	int k = (*data)[0].second.size();
      int index = 0;
 
 	if( (double)m / data->size() < 0.001 ) {return; }
@@ -149,7 +83,9 @@ void Leaf::split()
 	int n_l_ = 0;
 	int n_l_1_ = 0;
 
-	feature f(m);
+	vector<pair<double,pair<int,int> > > f(m);
+	vector<pair<double,pair<int,int> > > sf(m);
+
 	double  imp = 0.0;
 
 	double  best_sep_value = 0.0;
@@ -161,8 +97,9 @@ void Leaf::split()
 
 		for(int i = 0; i < m;i++)
 		{
-			f[i].first  = (*data)[(*items)[i]][j];
-			f[i].second = (*answ)[i];
+			f[i].first  = (*data)[(*items)[i]].second[j];
+			f[i].second.first = (*data)[(*items)[i]].first;
+			f[i].second.second = (*items)[i];
 		}
 
 		sort(f.begin(),f.end());
@@ -175,38 +112,63 @@ void Leaf::split()
 		for(int i = 0; i < m;i++) 
 		{
 			n_l += 1;
-			if(f[i].second == 0) 
+			if(f[i].second.first == 0) 
 				n_l_1 += 1;
-               
+
+               if(is_equ(f[i].first,f[i+1].first))
+				continue;
+
 			imp = d_imp(m,n_l,n_1,n_l_1);
 			
 			if(imp > s.first)
 			{
 				s.first = imp;
 				s.second = j;
+
 				n_l_ = n_l;
 				n_l_1_ = n_l_1;
+
                     index = i;
-				best_sep_value = f[index].first;
+				sf = f;
+				
 			}	
 		}
 	}
-	s = pair<double,int>(best_sep_value,s.second);
-	if(s.second == -1)return;
+	
+	s = pair<double,int>(sf[index].first,s.second);
+	
+	if(s.second == -1)
+		{return;}
 	
 	vector<int>* item_left  = new vector<int>;
 	vector<int>* item_right = new vector<int>;
 
-	for(int i = 0;i < m;i++)
+	if(index < m-1)
 	{
-		if((*data)[(*items)[i]][s.second] <= s.first)
+		for(int i = 0;i <= index;i++)
 		{
-			item_left->push_back((*items)[i]);
-		}
-		else item_right->push_back((*items)[i]);
-	}	
+			item_left->push_back(sf[i].second.second);
+		}	
 
-	items->clear();
+		for(int i = index+1;i < m;i++)
+		{
+			item_right->push_back(sf[i].second.second);
+		}
+	}
+	else 
+	{
+		for(int i = 0;i < index;i++)
+		{
+			item_left->push_back(sf[i].second.second);
+		}	
+
+		for(int i = index;i < m;i++)
+		{
+			item_right->push_back(sf[i].second.second);
+		}
+	}
+
+	/*items->clear();*/
 
 	n_l_1 = n_l_1_;
 	int n_r_1 = n_1 - n_l_1;
@@ -214,28 +176,43 @@ void Leaf::split()
 	if(item_left->size() == 0 || item_right->size() == 0)
 		{return;}
 		
-	pLeft = new Leaf(data,answ,item_left,n_l_1);
-	pRight = new Leaf(data,answ,item_right,n_r_1); 
-
+	pLeft = new Leaf(data,item_left,n_l_1,2*id+1);
+	pRight = new Leaf(data,item_right,n_r_1,2*id+2);
+	
+     
 	pLeft->split();
 	pRight->split();
-
-	PrL = (double) pLeft->size() / data->size();
-	PrL = (double) pRight->size() / data->size();
-
-	data = NULL;
-	answ = NULL;
 	
 }
 
 void Leaf::print_leaf(int leaf_level)
 {
+	int n = (int)items->size();
 	cout << "\nLeaf in level: "<< leaf_level << "\n";
-	cout << "Label : " << label <<"\n";
+	cout << "Label : " << label << " %: "<< ((double)n_1)/(double)n<< " n: "<<n <<" n_1: "<<n_1<<"\n";
      cout << "Impurity: "<< impurity << "\n";
-	cout << "First class %: "<<prc<< "\n";
-	cout << "Number of incorrect classified examples: "<<err_n<<"\n";
      cout << "Separate by value "<<s.first <<" of feature "<<s.second<<"\n";
+	cout << "id: "<<id<<"\n";
+
+	if(n > 0)
+	{
+     	cout << "Elements id in leaf: \n";
+     	for(int i = 0;i < n;i++)
+     	{
+			cout << (*items)[i] << " ";
+		}
+     	cout << "\n";
+	}
+
+	if(s.second != -1 && n > 0)
+	{
+     	cout << "Values in leaf: \n";
+     	for(int i = 0;i < n;i++)
+     	{
+			cout << (*data)[(*items)[i]].second[s.second] << " ";
+		}
+    	 	cout << "\n";
+	}
 }
 
 void Leaf::print_tree(int leaf_level)
@@ -244,6 +221,7 @@ void Leaf::print_tree(int leaf_level)
 	leaf_level += 1;
 	if(pLeft != NULL)
 		pLeft->print_tree(leaf_level);
+
 	if(pRight != NULL)
 		pRight->print_tree(leaf_level);
 }

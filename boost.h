@@ -14,7 +14,7 @@ class binary_cart_boost_classifier
 
 			double 	predict(vector<double>& sample);
            	void predict(vector<vector<double> >* data,vector<double>* predicted);
-			void train(vector<vector<double> >* data,vector<int>* answ_,int period = 0);
+			void train(vector<vector<double> >* data,vector<int>* answ_);
 		
 			CART_binar_classifier* models;
 			double* weights;
